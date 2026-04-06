@@ -1,31 +1,38 @@
-# SenseVoice-OneApi
-基于SenseVoice的funasr版本进行的api发布，可以无缝对接oneapi
+# sensevoice-openai-docker
+基于SenseVoice的funasr版本进行openai格式的api发布，并以Docker部署
 
-### 模型下载
-通过modelscope下载iic/SenseVoiceSmall和iic/speech_fsmn_vad_zh-cn-16k-common-pytorch
+## Docker部署运行，Compose脚本示例
 ```
-pip install modelscope
-modelscope download --model iic/SenseVoiceSmall --local_dir ./iic/SenseVoiceSmall
-modelscope download --model iic/speech_fsmn_vad_zh-cn-16k-common-pytorch --local_dir ./iic/speech_fsmn_vad_zh-cn-16k-common-pytorch
-```
+services:
+  sensevoice:
+    container_name: sensevoice-openai-docker
+    user: "1000:1000"
+    build:
+      context: https://github.com/lxp135/sensevoice-openai-docker.git
+      dockerfile: Dockerfile
+    image: sensevoice-openai-docker:local
+    networks:
+      br0:
+        ipv4_address: 192.168.50.90
+    ports:
+      - "8000:8000"
+    volumes:
+      - /mnt/user/appdata/sensevoice/iic:/app/iic
+    environment:
+      TZ: Asia/Shanghai
+      DEVICE_TYPE: cpu
+      VAD_ENABLE: "1"
+      language: zh
+      ncpu: "4"
+      HOME: /app/iic
+      XDG_CACHE_HOME: /app/iic/.cache
+      MODELSCOPE_CACHE: /app/iic/modelscope
+      MS_CACHE_HOME: /app/iic/modelscope
+    restart: unless-stopped
 
-### Docker部署运行
-```
-# 根据dockerfile构建镜像
-docker build -t sensevoice-oneapi:1.0 .
-# 通过阿里云镜像仓库拉取，只包含SenseVoiceSmall模型，无需再下载
-docker pull registry.cn-hangzhou.aliyuncs.com/lucklittleboy/sensevoice-oneapi:1.0
-# 运行
-# 注意在运行前如果本地没有提前下载模型，则会通过modelscope自动下载模型
-docker run -d --name=sensevoice -p 8000:8000 -v /home/iic:/app/iic sensevoice-oneapi:1.0
-```
-
-### 本地安装运行
-```
-# 安装依赖
-pip install -r requirements.txt
-# 运行
-python main.py
+networks:
+  br0:
+    external: true
 ```
 
 ### 指定推理方式
@@ -44,7 +51,7 @@ curl --request POST 'http://127.0.0.1:8000/v1/audio/transcriptions' \
 返回结果
 {"text": "欢迎大家来体验达摩院推出的语音识别模型"}
 
-### 接入One Api
+### 其他应用接入
 渠道类型使用OpenAI或者自定义渠道
 模型填入whisper-1
 代理填写对应的地址：http://ip:8000
